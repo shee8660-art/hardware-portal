@@ -4,9 +4,8 @@ const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 
-
-// Import database first to initialize
-const { db, initDatabase } = require('./models/database');
+// Import database module (this handles both SQLite and PostgreSQL)
+const { db, initDatabase, query, get, run, isProduction } = require('./models/database');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -40,11 +39,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use('/uploads', express.static('public/uploads'));
 app.use(session({
-    secret: 'your-secret-key-change-this',
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-this',
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        secure: false,
+        secure: process.env.NODE_ENV === 'production',
         maxAge: 3600000,
         httpOnly: true,
         sameSite: 'strict'
@@ -57,6 +56,33 @@ app.use((req, res, next) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     next();
+});
+
+// Make db available to routes
+app.use((req, res, next) => {
+    req.db = db;
+    req.query = query;
+    req.get = get;
+    req.run = run;
+    next();
+});
+
+// Test endpoint to check database connection
+app.get('/api/test', async (req, res) => {
+    try {
+        const users = await query('SELECT id, username, role FROM users LIMIT 5');
+        res.json({
+            success: true,
+            message: 'Database connected!',
+            userCount: users.length,
+            users: users
+        });
+    } catch (error) {
+        res.json({
+            success: false,
+            error: error.message
+        });
+    }
 });
 
 // Routes
@@ -84,9 +110,24 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📊 Default login: admin / admin123`);
-    console.log(`✅ API Server Ready\n`);
-});
+// Initialize database and start server
+async function startServer() {
+    try {
+        // Initialize database tables and default data
+        await initDatabase();
+        console.log('✅ Database initialized successfully');
+        
+        // Start server
+        app.listen(PORT, () => {
+            console.log(`\n🚀 Server running on port ${PORT}`);
+            console.log(`📊 Environment: ${isProduction ? 'PRODUCTION (Supabase)' : 'DEVELOPMENT (SQLite)'}`);
+            console.log(`📊 Default login: admin / admin123`);
+            console.log(`✅ API Server Ready\n`);
+        });
+    } catch (error) {
+        console.error('❌ Failed to initialize database:', error);
+        process.exit(1);
+    }
+}
+
+startServer();
