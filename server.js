@@ -117,8 +117,8 @@ async function startServer() {
         await initDatabase();
         console.log('✅ Database initialized successfully');
         
-        // Start server
-        app.listen(PORT, () => {
+        // Start server - LISTEN ON 0.0.0.0 (critical for Render)
+        app.listen(PORT, '0.0.0.0', () => {
             console.log(`\n🚀 Server running on port ${PORT}`);
             console.log(`📊 Environment: ${isProduction ? 'PRODUCTION (Supabase)' : 'DEVELOPMENT (SQLite)'}`);
             console.log(`📊 Default login: admin / admin123`);

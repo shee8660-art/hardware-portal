@@ -12,7 +12,9 @@ if (isProduction) {
     const { Pool } = require('pg');
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false }
+        ssl: { 
+            rejectUnauthorized: false  // This is usually enough for Supabase
+        }
     });
     db = pool;
     
@@ -190,6 +192,7 @@ async function initDatabase() {
             await run(`INSERT INTO users (username, password, role, fullname, email, branch_code, branch_name) 
                     VALUES ($1, $2, $3, $4, $5, $6, $7)`, 
                     ['admin', hashedPassword, 'admin', 'System Administrator', 'admin@example.com', 'ADMIN', 'Head Office']);
+            console.log('✅ Admin user created');
         }
         
         // Insert sample DIT user
@@ -198,6 +201,7 @@ async function initDatabase() {
             await run(`INSERT INTO users (username, password, role, fullname, email, branch_code, branch_name) 
                     VALUES ($1, $2, $3, $4, $5, $6, $7)`, 
                     ['dituser', hashedPassword, 'dit', 'DIT Officer', 'dit@example.com', 'DIT001', 'Main Branch']);
+            console.log('✅ DIT user created');
         }
         
         // Insert sample BIT user
@@ -206,6 +210,7 @@ async function initDatabase() {
             await run(`INSERT INTO users (username, password, role, fullname, email, branch_code, branch_name) 
                     VALUES ($1, $2, $3, $4, $5, $6, $7)`, 
                     ['bituser', hashedPassword, 'bit', 'BIT Staff', 'bit@example.com', 'BIT001', 'Store Branch']);
+            console.log('✅ BIT user created');
         }
         
     } else {
@@ -359,18 +364,25 @@ async function initDatabase() {
                 }
             });
         });
+        
+        // Wait a bit for SQLite initialization
+        await new Promise(resolve => setTimeout(resolve, 100));
     }
     
     console.log('✅ Database initialization complete');
 }
 
 async function logActivity(userId, action, details, ip = null) {
-    if (isProduction) {
-        await run(`INSERT INTO activity_logs (user_id, action, details, ip_address) VALUES ($1, $2, $3, $4)`,
-            [userId, action, details, ip]);
-    } else {
-        db.run(`INSERT INTO activity_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)`,
-            [userId, action, details, ip]);
+    try {
+        if (isProduction) {
+            await run(`INSERT INTO activity_logs (user_id, action, details, ip_address) VALUES ($1, $2, $3, $4)`,
+                [userId, action, details, ip]);
+        } else {
+            db.run(`INSERT INTO activity_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)`,
+                [userId, action, details, ip]);
+        }
+    } catch (err) {
+        console.error('Error logging activity:', err);
     }
 }
 
