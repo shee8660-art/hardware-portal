@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DIT Dashboard</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #eef2f3;
+      margin: 0;
+      padding: 20px;
+    }
+    .nav {
+      text-align: right;
+    }
+    button {
+      background: #c0392b;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+    }
+    th {
+      background: #34495e;
+      color: white;
+    }
+  </style>
+</head>
+<body onload="checkAuth('DIT')">
+  <div class="nav">
+    <button onclick="logout()">Logout</button>
+  </div>
+  <h1>💻 DIT Dashboard</h1>
+  <p>Welcome, DIT user! Below are all current hardware requests.</p>
+
+  <table id="requestTable">
+    <thead>
+      <tr>
+        <th>Ticket #</th>
+        <th>Branch</th>
+        <th>Category</th>
+        <th>Item</th>
+        <th>Brand</th>
+        <th>Model</th>
+        <th>Status</th>
+        <th>Remarks</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script src="js/script.js"></script>
+</body>
+</html>

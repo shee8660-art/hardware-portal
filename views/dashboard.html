@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Hardware Portal - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        /* Settings icon animation */
+        .settings-icon {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .settings-icon:hover {
+            transform: rotate(90deg) scale(1.1);
+            color: #3b82f6;
+        }
+        .settings-icon:active {
+            transform: rotate(180deg) scale(0.95);
+        }
+        
+        /* Modal animation */
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .modal-animate {
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        
+        /* Fix modal scrolling */
+        .modal-container {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 90vw;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        .modal-header {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+        .modal-body {
+            padding: 24px;
+        }
+        .modal-footer {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            padding: 16px 24px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Sticky Navigation Bar -->
+    <nav class="sticky-nav bg-white shadow-lg border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-microchip text-2xl text-blue-600"></i>
+                    <h1 class="text-xl font-bold text-gray-800">IT Hardware Portal</h1>
+                    <span id="userRoleBadge" class="ml-2 px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 font-semibold"></span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-right hidden sm:block">
+                        <p id="userName" class="text-sm font-medium text-gray-700"></p>
+                        <p id="userBranch" class="text-xs text-gray-500"></p>
+                    </div>
+                    <!-- Settings Icon with Animation -->
+                    <div class="relative">
+                        <i id="settingsIcon" class="fas fa-cog settings-icon text-gray-600 text-xl cursor-pointer hover:text-blue-600 transition-all duration-300"></i>
+                    </div>
+                    <button onclick="logout()" class="flex items-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tabs -->
+            <div class="flex space-x-1 overflow-x-auto pb-0">
+                <button onclick="showTab('dashboard')" id="tab-dashboard-btn" class="tab-btn px-4 py-2 text-gray-600 hover:text-blue-600 font-medium transition">
+                    <i class="fas fa-chart-line mr-2"></i>Dashboard
+                </button>
+                <button onclick="showTab('requests')" id="tab-requests-btn" class="tab-btn px-4 py-2 text-gray-600 hover:text-blue-600 font-medium transition">
+                    <i class="fas fa-folder-open mr-2"></i>Hardware Requests
+                </button>
+                <button onclick="showTab('deployed')" id="tab-deployed-btn" class="tab-btn px-4 py-2 text-gray-600 hover:text-blue-600 font-medium transition">
+                    <i class="fas fa-check-circle mr-2"></i>Deployed Units
+                </button>
+                <button onclick="showTab('reports')" id="tab-reports-btn" class="tab-btn px-4 py-2 text-gray-600 hover:text-blue-600 font-medium transition admin-only hidden">
+                    <i class="fas fa-chart-bar mr-2"></i>Reports
+                </button>
+                <button onclick="showTab('users')" id="tab-users-btn" class="tab-btn px-4 py-2 text-gray-600 hover:text-blue-600 font-medium transition admin-only hidden">
+                    <i class="fas fa-users mr-2"></i>Users
+                </button>
+                <button onclick="showTab('categories')" id="tab-categories-btn" class="tab-btn px-4 py-2 text-gray-600 hover:text-blue-600 font-medium transition admin-only hidden">
+                    <i class="fas fa-tags mr-2"></i>Categories
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div id="tabContent" class="tab-content">
+            <div class="text-center py-8"><div class="loader mx-auto"></div><p class="mt-4 text-gray-500">Loading...</p></div>
+        </div>
+    </main>
+    
+    <!-- Profile Edit Modal -->
+    <div id="profileModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-lg max-w-md w-full modal-animate">
+            <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center rounded-t-lg">
+                <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-user-edit mr-2 text-blue-600"></i>Edit Profile</h2>
+                <button onclick="closeProfileModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div class="p-6">
+                <form id="profileForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                        <input type="text" id="profileFullname" class="w-full px-3 py-2 border rounded-lg form-input">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="profileEmail" class="w-full px-3 py-2 border rounded-lg form-input">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Current Password <span class="text-red-500">*</span></label>
+                        <input type="password" id="profileCurrentPassword" placeholder="Enter current password" class="w-full px-3 py-2 border rounded-lg form-input">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                        <input type="password" id="profileNewPassword" placeholder="Leave blank to keep current" class="w-full px-3 py-2 border rounded-lg form-input" onkeyup="checkProfilePasswordStrength()">
+                        <div class="password-strength mt-1"></div>
+                        <p class="text-xs text-gray-500 mt-1">8+ characters, no special characters</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                        <input type="password" id="profileConfirmPassword" placeholder="Confirm new password" class="w-full px-3 py-2 border rounded-lg form-input">
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4 border-t">
+                        <button type="button" onclick="closeProfileModal()" class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- New Request Modal -->
+    <div id="newRequestModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-lg max-w-3xl w-full my-8 modal-animate">
+            <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center rounded-t-lg">
+                <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-plus-circle mr-2 text-blue-600"></i>Add New Hardware Request</h2>
+                <button onclick="closeNewRequestModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                <form id="hardwareRequestForm" class="space-y-6">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-info-circle mr-2 text-blue-600"></i>Request Information</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Ticket #</label><input type="text" id="ticketNo" placeholder="Leave empty for auto-generated" class="w-full px-3 py-2 border rounded-lg form-input"><p class="text-xs text-gray-500 mt-1">Optional. Will be auto-generated if left empty.</p></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Branch <span class="text-red-500">*</span></label><select id="branchSelect" required class="w-full px-3 py-2 border rounded-lg form-select"><option value="">-- Select Branch --</option></select></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Date Reported</label><input type="date" id="date_reported" class="w-full px-3 py-2 border rounded-lg form-input"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Requested By</label><input type="text" id="requested_by" readonly class="w-full px-3 py-2 border rounded-lg bg-gray-100"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Remarks <span class="text-red-500">*</span></label><select id="remarksSelect" required class="w-full px-3 py-2 border rounded-lg form-select"><option value="">-- Select Remarks --</option><option value="Pending">Pending</option><option value="On Hold">On Hold</option><option value="Deployed">Deployed</option><option value="Closed">Closed</option></select></div>
+                            <div id="trfField" class="hidden"><label class="block text-sm font-medium text-gray-700 mb-1">TRF # <span class="text-red-500">*</span></label><input type="text" id="trfNumber" placeholder="Enter TRF number" class="w-full px-3 py-2 border rounded-lg form-input"></div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-microchip mr-2 text-blue-600"></i>Asset Details</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Asset Category <span class="text-red-500">*</span></label>
+                                <select id="asset_category" required class="w-full px-3 py-2 border rounded-lg form-select">
+                                    <option value="">-- Select Category --</option>
+                                    <option value="Server">Server</option><option value="Workstation">Workstation</option><option value="POS">POS</option>
+                                    <option value="Hard Disk">Hard Disk</option><option value="Thermal Printer">Thermal Printer</option>
+                                    <option value="Thermal Printer Power Adaptor">Thermal Printer Power Adaptor</option>
+                                    <option value="Dot Matrix Printer">Dot Matrix Printer</option><option value="Inkjet Printer">Inkjet Printer</option>
+                                    <option value="3in1 Inkjet Printer">3in1 Inkjet Printer</option><option value="Shelftag Printer">Shelftag Printer</option>
+                                    <option value="Monitor">Monitor</option><option value="Cash Drawer">Cash Drawer</option><option value="Cradle">Cradle</option>
+                                    <option value="Data Collector">Data Collector</option><option value="Network Switch 48P">Network Switch 48P</option>
+                                    <option value="Network Switch 24P">Network Switch 24P</option><option value="Access Point">Access Point</option>
+                                    <option value="Magnetic Swipe Reader">Magnetic Swipe Reader</option><option value="Fingerprint Scanner">Fingerprint Scanner</option>
+                                    <option value="Vertical Scanner">Vertical Scanner</option><option value="Handheld Scanner">Handheld Scanner</option>
+                                    <option value="Scanner Power Adaptor">Scanner Power Adaptor</option><option value="Scanner Data Cable">Scanner Data Cable</option>
+                                    <option value="Tower UPS">Tower UPS</option><option value="Regular UPS">Regular UPS</option><option value="Price Verifier">Price Verifier</option>
+                                    <option value="Speaker">Speaker</option><option value="WebCam">WebCam</option><option value="Keyboard">Keyboard</option>
+                                    <option value="Mouse">Mouse</option><option value="Laptop">Laptop</option>
+                                </select>
+                            </div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Brand <span class="text-red-500">*</span></label><input type="text" id="brand" required class="w-full px-3 py-2 border rounded-lg form-input"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Model <span class="text-red-500">*</span></label><input type="text" id="model" required class="w-full px-3 py-2 border rounded-lg form-input"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Serial Number <span class="text-red-500">*</span></label><input type="text" id="serial_number" required class="w-full px-3 py-2 border rounded-lg form-input"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Hardware Age</label><select id="hardware_age" class="w-full px-3 py-2 border rounded-lg form-select"><option value="">-- Select --</option><option value="1-2yrs">1-2 years</option><option value="3-4yrs">3-4 years</option><option value="5-9yrs">5-9 years</option><option value="10yrs">10+ years</option></select></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Status</label><select id="status" class="w-full px-3 py-2 border rounded-lg form-select" onchange="toggleNewRequestTrfField()"><option value="For DM Approval">For DM Approval</option><option value="Delivery of unit to Depot">Delivery of unit to Depot</option><option value="For TRF Request">For TRF Request</option><option value="For Store Transfer">For Store Transfer</option><option value="Received on Store">Received on Store</option><option value="Deployed on Store">Deployed on Store</option><option value="For Repair">For Repair</option></select></div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4"><h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-file-alt mr-2 text-blue-600"></i>Additional Details</h3><div><label class="block text-sm font-medium text-gray-700 mb-1">Problem Description</label><textarea id="description" rows="3" class="w-full px-3 py-2 border rounded-lg form-input"></textarea></div></div>
+                </form>
+            </div>
+            <div class="sticky bottom-0 bg-white px-6 py-4 border-t flex justify-end space-x-3 rounded-b-lg">
+                <button type="button" onclick="closeNewRequestModal()" class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">Cancel</button>
+                <button type="button" id="submitRequestBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Submit Request</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Received Modal -->
+    <div id="receivedModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-lg max-w-md w-full modal-animate">
+            <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center rounded-t-lg">
+                <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-check-circle mr-2 text-green-600"></i>Mark as Received</h2>
+                <button onclick="closeReceivedModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div class="p-6">
+                <form id="receivedForm" enctype="multipart/form-data">
+                    <input type="hidden" id="receivedRequestId">
+                    <div id="ditBranchSelectDiv" class="mb-4 hidden"><label class="block text-sm font-medium text-gray-700 mb-2">Select Branch <span class="text-red-500">*</span></label><select id="receivedBranchSelect" required class="w-full px-3 py-2 border rounded-lg"><option value="">-- Select Branch --</option></select></div>
+                    <div class="mb-4"><label class="block text-sm font-medium text-gray-700 mb-2">Proof of Receipt (Photo) <span class="text-red-500">*</span></label><input type="file" id="receivedPhoto" accept="image/*" required class="w-full px-3 py-2 border rounded-lg"><p class="text-xs text-gray-500 mt-1">Upload photo as proof of receipt (JPG, PNG only, max 5MB)</p><img id="receivedPhotoPreview" class="photo-preview hidden"></div>
+                    <div class="flex justify-end space-x-3 pt-4 border-t"><button type="button" onclick="closeReceivedModal()" class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">Cancel</button><button type="submit" id="confirmReceivedBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Confirm Received</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Deploy Modal -->
+    <div id="deployModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-lg max-w-lg w-full modal-animate">
+            <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center rounded-t-lg">
+                <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-rocket mr-2 text-blue-600"></i>Deploy Hardware</h2>
+                <button onclick="closeDeployModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                <form id="deployForm" enctype="multipart/form-data" class="space-y-4">
+                    <input type="hidden" id="deployRequestId">
+                    <div id="deployBranchSelectDiv" class="mb-4 hidden"><label class="block text-sm font-medium text-gray-700 mb-2">Select Branch <span class="text-red-500">*</span></label><select id="deployBranchSelect" required class="w-full px-3 py-2 border rounded-lg"><option value="">-- Select Branch --</option></select></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Branch Code <span class="text-red-500">*</span></label><input type="text" id="deployBranchCode" required class="w-full px-3 py-2 border rounded-lg"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Branch Name <span class="text-red-500">*</span></label><input type="text" id="deployBranchName" required class="w-full px-3 py-2 border rounded-lg"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Brand <span class="text-red-500">*</span></label><input type="text" id="deployBrand" required class="w-full px-3 py-2 border rounded-lg"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Model <span class="text-red-500">*</span></label><input type="text" id="deployModel" required class="w-full px-3 py-2 border rounded-lg"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Serial Number <span class="text-red-500">*</span></label><input type="text" id="deploySerialNumber" required class="w-full px-3 py-2 border rounded-lg"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Deployment Date <span class="text-red-500">*</span></label><input type="date" id="deploymentDate" required class="w-full px-3 py-2 border rounded-lg"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Proof of Deployment (Photo) <span class="text-red-500">*</span></label><input type="file" id="deploymentPhoto" accept="image/*" required class="w-full px-3 py-2 border rounded-lg"><p class="text-xs text-gray-500 mt-1">Upload photo as proof of deployment (JPG, PNG only, max 5MB)</p><img id="deployPhotoPreview" class="photo-preview hidden"></div>
+                </form>
+            </div>
+            <div class="sticky bottom-0 bg-white px-6 py-4 border-t flex justify-end space-x-3 rounded-b-lg">
+                <button type="button" onclick="closeDeployModal()" class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">Cancel</button>
+                <button type="submit" id="confirmDeployBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Confirm Deployment</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Request Modal -->
+    <div id="editRequestModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-lg max-w-3xl w-full my-8 modal-animate">
+            <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center rounded-t-lg">
+                <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-edit mr-2 text-yellow-600"></i>Edit Hardware Request</h2>
+                <button onclick="closeEditRequestModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                <form id="editRequestForm" class="space-y-6">
+                    <input type="hidden" id="editRequestId">
+                    <div class="bg-gray-50 rounded-lg p-4"><h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-info-circle mr-2 text-blue-600"></i>Request Information</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Ticket #</label><input type="text" id="editTicketNo" readonly class="w-full px-3 py-2 border rounded-lg bg-gray-100"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Branch Code <span class="text-red-500">*</span></label><input type="text" id="editBranchCode" required class="w-full px-3 py-2 border rounded-lg form-input"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Branch Name <span class="text-red-500">*</span></label><input type="text" id="editBranchName" required class="w-full px-3 py-2 border rounded-lg form-input"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Date Reported</label><input type="date" id="editDateReported" class="w-full px-3 py-2 border rounded-lg form-input"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Remarks</label><select id="editRemarks" class="w-full px-3 py-2 border rounded-lg form-select"><option value="Pending">Pending</option><option value="On Hold">On Hold</option><option value="Deployed">Deployed</option><option value="Closed">Closed</option></select></div><div id="editTrfField" class="hidden"><label class="block text-sm font-medium text-gray-700 mb-1">TRF # <span class="text-red-500">*</span></label><input type="text" id="editTrfNumber" class="w-full px-3 py-2 border rounded-lg form-input"></div></div></div>
+                    <div class="bg-gray-50 rounded-lg p-4"><h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-microchip mr-2 text-blue-600"></i>Asset Details</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Asset Category <span class="text-red-500">*</span></label><select id="editAssetCategory" required class="w-full px-3 py-2 border rounded-lg form-select"><option value="">-- Select Category --</option><option value="Server">Server</option><option value="Workstation">Workstation</option><option value="POS">POS</option><option value="Hard Disk">Hard Disk</option><option value="Thermal Printer">Thermal Printer</option><option value="Thermal Printer Power Adaptor">Thermal Printer Power Adaptor</option><option value="Dot Matrix Printer">Dot Matrix Printer</option><option value="Inkjet Printer">Inkjet Printer</option><option value="3in1 Inkjet Printer">3in1 Inkjet Printer</option><option value="Shelftag Printer">Shelftag Printer</option><option value="Monitor">Monitor</option><option value="Cash Drawer">Cash Drawer</option><option value="Cradle">Cradle</option><option value="Data Collector">Data Collector</option><option value="Network Switch 48P">Network Switch 48P</option><option value="Network Switch 24P">Network Switch 24P</option><option value="Access Point">Access Point</option><option value="Magnetic Swipe Reader">Magnetic Swipe Reader</option><option value="Fingerprint Scanner">Fingerprint Scanner</option><option value="Vertical Scanner">Vertical Scanner</option><option value="Handheld Scanner">Handheld Scanner</option><option value="Scanner Power Adaptor">Scanner Power Adaptor</option><option value="Scanner Data Cable">Scanner Data Cable</option><option value="Tower UPS">Tower UPS</option><option value="Regular UPS">Regular UPS</option><option value="Price Verifier">Price Verifier</option><option value="Speaker">Speaker</option><option value="WebCam">WebCam</option><option value="Keyboard">Keyboard</option><option value="Mouse">Mouse</option><option value="Laptop">Laptop</option></select></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Brand <span class="text-red-500">*</span></label><input type="text" id="editBrand" required class="w-full px-3 py-2 border rounded-lg form-input"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Model <span class="text-red-500">*</span></label><input type="text" id="editModel" required class="w-full px-3 py-2 border rounded-lg form-input"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Serial Number <span class="text-red-500">*</span></label><input type="text" id="editSerialNumber" required class="w-full px-3 py-2 border rounded-lg form-input"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Hardware Age</label><select id="editHardwareAge" class="w-full px-3 py-2 border rounded-lg form-select"><option value="">-- Select --</option><option value="1-2yrs">1-2 years</option><option value="3-4yrs">3-4 years</option><option value="5-9yrs">5-9 years</option><option value="10yrs">10+ years</option></select></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Status</label><select id="editStatus" class="w-full px-3 py-2 border rounded-lg form-select" onchange="toggleEditTrfField()"><option value="For DM Approval">For DM Approval</option><option value="Delivery of unit to Depot">Delivery of unit to Depot</option><option value="For TRF Request">For TRF Request</option><option value="For Store Transfer">For Store Transfer</option><option value="Received on Store">Received on Store</option><option value="Deployed on Store">Deployed on Store</option><option value="For Repair">For Repair</option></select></div></div></div>
+                    <div class="bg-gray-50 rounded-lg p-4"><h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-file-alt mr-2 text-blue-600"></i>Additional Details</h3><div><label class="block text-sm font-medium text-gray-700 mb-1">Problem Description</label><textarea id="editDescription" rows="3" class="w-full px-3 py-2 border rounded-lg form-input"></textarea></div></div>
+                </form>
+            </div>
+            <div class="sticky bottom-0 bg-white px-6 py-4 border-t flex justify-end space-x-3 rounded-b-lg">
+                <button type="button" onclick="closeEditRequestModal()" class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">Cancel</button>
+                <button type="button" onclick="saveEditRequest()" class="px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">Save Changes</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Request Details Modal -->
+    <div id="detailsModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col modal-animate">
+            <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center rounded-t-lg">
+                <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-info-circle mr-2 text-blue-600"></i>Request Details</h2>
+                <button onclick="closeDetailsModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div id="detailsContent" class="flex-1 overflow-y-auto p-6"></div>
+        </div>
+    </div>
+    
+    <!-- Select User Type Modal -->
+    <div id="selectUserTypeModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-lg max-w-md w-full modal-animate">
+            <div class="px-6 py-4 border-b"><h2 class="text-xl font-bold text-gray-800"><i class="fas fa-user-plus mr-2 text-blue-600"></i>Select User Type</h2></div>
+            <div class="p-6 space-y-4">
+                <button onclick="openCreateUserModal('bit')" class="w-full bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg transition flex items-center justify-center space-x-3"><i class="fas fa-user text-xl"></i><span class="font-semibold">Create BIT User</span></button>
+                <button onclick="openCreateUserModal('dit')" class="w-full bg-purple-600 hover:bg-purple-700 text-white px-5 py-3 rounded-lg transition flex items-center justify-center space-x-3"><i class="fas fa-user-tie text-xl"></i><span class="font-semibold">Create DIT User</span></button>
+                <button onclick="closeSelectUserTypeModal()" class="w-full bg-gray-300 hover:bg-gray-400 text-gray-700 px-5 py-3 rounded-lg transition">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col modal-animate">
+            <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center rounded-t-lg">
+                <h2 id="createUserTitle" class="text-2xl font-bold text-gray-800"><i class="fas fa-user-plus mr-2 text-blue-600"></i>Create New User</h2>
+                <button onclick="closeCreateUserModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <form id="createUserForm" class="space-y-6">
+                    <input type="hidden" id="editUserId" value="">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Username <span class="text-red-500">*</span></label><input type="text" id="newUsername" required class="w-full px-3 py-2 border rounded-lg"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Password <span class="text-red-500">*</span></label><input type="password" id="newPassword" required class="w-full px-3 py-2 border rounded-lg" onkeyup="checkPasswordStrength()"><div class="password-strength mt-1"></div><p class="text-xs text-gray-500 mt-1">8+ characters, no special characters</p></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label><input type="text" id="newFullname" class="w-full px-3 py-2 border rounded-lg"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" id="newEmail" class="w-full px-3 py-2 border rounded-lg"></div>
+                    </div>
+                    <div id="ditFields" class="hidden bg-blue-50 rounded-lg p-4"><h3 class="font-semibold text-gray-800 mb-3"><i class="fas fa-map-marker-alt mr-2 text-blue-600"></i>District & Branch Assignment</h3><div class="mb-4"><label class="block text-sm font-medium text-gray-700 mb-2">Select District <span class="text-red-500">*</span></label><select id="ditDistrict" class="w-full px-3 py-2 border rounded-lg"><option value="">-- Select District --</option><option value="North 1">North 1</option><option value="North 2">North 2</option><option value="North 3">North 3</option><option value="North 4">North 4</option><option value="Metro Manila">Metro Manila</option><option value="South 1">South 1</option><option value="South 2">South 2</option><option value="South 3">South 3</option><option value="South 4">South 4</option></select></div><div><div class="flex justify-between items-center mb-3"><label class="block text-sm font-medium text-gray-700">Select Branches to Manage <span class="text-red-500">*</span></label><div class="flex gap-2"><button type="button" onclick="selectAllBranches()" class="select-all-btn"><i class="fas fa-check-double mr-1"></i>Select All</button><button type="button" onclick="deselectAllBranches()" class="select-all-btn"><i class="fas fa-times mr-1"></i>Deselect All</button></div></div><div id="branchesCheckboxList" class="branch-selector"><p class="text-gray-400 text-center col-span-full">Loading branches...</p></div><div class="mt-3 text-right"><span id="selectedCount" class="selected-count-badge">0 selected</span></div><p class="text-xs text-gray-500 mt-2">Check all branches that this DIT user will manage</p></div></div>
+                    <div id="bitFields" class="hidden bg-green-50 rounded-lg p-4"><h3 class="font-semibold text-gray-800 mb-3"><i class="fas fa-store mr-2 text-green-600"></i>Branch Assignment</h3><div class="mb-4"><label class="block text-sm font-medium text-gray-700 mb-2">Branch Code <span class="text-red-500">*</span></label><input type="text" id="bitBranchCode" placeholder="e.g., BR001" class="w-full px-3 py-2 border rounded-lg"></div><div><label class="block text-sm font-medium text-gray-700 mb-2">Branch Name <span class="text-red-500">*</span></label><input type="text" id="bitBranchName" placeholder="e.g., Makati Main" class="w-full px-3 py-2 border rounded-lg"></div><p class="text-xs text-gray-500 mt-2">This branch will be available for DIT users to select</p></div>
+                </form>
+            </div>
+            <div class="sticky bottom-0 bg-white px-6 py-4 border-t flex justify-end space-x-3 rounded-b-lg">
+                <button type="button" onclick="closeCreateUserModal()" class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">Cancel</button>
+                <button type="submit" id="saveUserBtn" form="createUserForm" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save User</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Grade Modal with Comment -->
+    <div id="gradeModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-lg max-w-md w-full modal-animate">
+            <div class="sticky top-0 bg-white px-6 py-4 border-b flex justify-between items-center rounded-t-lg">
+                <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-star mr-2 text-yellow-600"></i>Add Grade</h2>
+                <button onclick="closeGradeModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div class="p-6">
+                <input type="hidden" id="gradeUnitId">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Timeliness (50%) <span class="text-red-500">*</span></label>
+                    <input type="number" id="timelinessGrade" min="1" max="100" class="w-full px-3 py-2 border rounded-lg form-input" placeholder="1-100">
+                    <p class="text-xs text-gray-500 mt-1">Grade for how timely the deployment was completed</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Deployment Quality (50%) <span class="text-red-500">*</span></label>
+                    <input type="number" id="deploymentGrade" min="1" max="100" class="w-full px-3 py-2 border rounded-lg form-input" placeholder="1-100">
+                    <p class="text-xs text-gray-500 mt-1">Grade for the quality of deployment and documentation</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Comment <span class="text-red-500">*</span></label>
+                    <textarea id="gradeComment" rows="3" class="w-full px-3 py-2 border rounded-lg form-input" placeholder="Please provide feedback or comments about this deployment..."></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Comment is required before grading</p>
+                </div>
+                <div class="bg-blue-50 p-3 rounded-lg mb-4">
+                    <p class="text-sm text-blue-800"><i class="fas fa-info-circle mr-1"></i> Average will be calculated automatically: (Timeliness + Deployment) / 2</p>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <button type="button" onclick="closeGradeModal()" class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">Cancel</button>
+                    <button type="button" onclick="submitGrade()" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">Save Grade</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="/js/main.js"></script>
+    <script src="/js/dashboard.js"></script>
+    <script src="/js/requests.js"></script>
+    <script src="/js/deployed.js"></script>
+    <script src="/js/reports.js"></script>
+    <script src="/js/users.js"></script>
+    <script src="/js/categories.js"></script>
+    
+    <script>
+        // ========== PROFILE MODAL FUNCTIONS ==========
+        function openProfileModal() {
+            document.getElementById('profileFullname').value = currentUser?.fullname || '';
+            document.getElementById('profileEmail').value = currentUser?.email || '';
+            document.getElementById('profileCurrentPassword').value = '';
+            document.getElementById('profileNewPassword').value = '';
+            document.getElementById('profileConfirmPassword').value = '';
+            document.getElementById('profileModal').classList.remove('hidden');
+        }
+        
+        function closeProfileModal() { document.getElementById('profileModal').classList.add('hidden'); }
+        
+        function checkProfilePasswordStrength() {
+            const password = document.getElementById('profileNewPassword');
+            if (!password) return;
+            const strengthDiv = document.querySelector('#profileModal .password-strength');
+            if (!strengthDiv) return;
+            const val = password.value;
+            if (!val) { strengthDiv.innerHTML = ''; return; }
+            if (val.length < 8) strengthDiv.innerHTML = '<div class="password-strength strength-weak"></div>';
+            else if (val.length >= 8 && /[A-Z]/.test(val) && /[0-9]/.test(val)) strengthDiv.innerHTML = '<div class="password-strength strength-strong"></div>';
+            else strengthDiv.innerHTML = '<div class="password-strength strength-medium"></div>';
+        }
+        
+        document.getElementById('settingsIcon')?.addEventListener('click', function() { openProfileModal(); });
+        
+        // Profile form submit
+        document.getElementById('profileForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fullname = document.getElementById('profileFullname').value;
+            const email = document.getElementById('profileEmail').value;
+            const currentPassword = document.getElementById('profileCurrentPassword').value;
+            const newPassword = document.getElementById('profileNewPassword').value;
+            const confirmPassword = document.getElementById('profileConfirmPassword').value;
+            
+            if (!currentPassword) { showToast('Current password is required', 'error'); return; }
+            if (newPassword && newPassword !== confirmPassword) { showToast('New passwords do not match', 'error'); return; }
+            if (newPassword) {
+                if (newPassword.length < 8) { showToast('New password must be at least 8 characters', 'error'); return; }
+                if (/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) { showToast('New password cannot contain special characters', 'error'); return; }
+            }
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch('/api/users/profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fullname, email, currentPassword, newPassword })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeProfileModal();
+                    showToast('Profile updated successfully!', 'success');
+                    if (data.user) { currentUser = data.user; document.getElementById('userName').textContent = currentUser.fullname || currentUser.username; }
+                    await loadUserInfo();
+                    if (currentUser && currentUser.role === 'dit') { await loadDitBranches(); if (currentTab === 'dashboard' && typeof loadDashboard === 'function') await loadDashboard(); }
+                } else { showToast(data.error || 'Failed to update profile', 'error'); }
+            } catch (error) { showToast('Network error. Please try again.', 'error'); }
+            finally { btn.innerHTML = originalText; btn.disabled = false; }
+        });
+        
+        // ========== EVENT HANDLERS ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            // Received Form Handler
+            const confirmReceivedBtn = document.getElementById('confirmReceivedBtn');
+            if (confirmReceivedBtn) {
+                const newBtn = confirmReceivedBtn.cloneNode(true);
+                confirmReceivedBtn.parentNode.replaceChild(newBtn, confirmReceivedBtn);
+                newBtn.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    const requestId = document.getElementById('receivedRequestId').value;
+                    const formData = new FormData();
+                    const photoFile = document.getElementById('receivedPhoto').files[0];
+                    if (!photoFile) { showToast('Please upload proof photo', 'error'); return; }
+                    formData.append('photo', photoFile);
+                    if (currentUser && currentUser.role === 'dit') {
+                        const branchCode = document.getElementById('receivedBranchSelect').value;
+                        if (!branchCode) { showToast('Please select a branch', 'error'); return; }
+                        formData.append('branch_code', branchCode);
+                    }
+                    const btn = newBtn;
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                    btn.disabled = true;
+                    try {
+                        const res = await fetch(`/api/hardware-requests/${requestId}/received`, { method: 'PUT', body: formData });
+                        const data = await res.json();
+                        if (data.success) {
+                            closeReceivedModal();
+                            showToast('Request marked as received!', 'success');
+                            if (typeof loadRequestsView === 'function') await loadRequestsView();
+                            if (typeof loadDeployedUnits === 'function') await loadDeployedUnits();
+                        } else { showToast(data.error || 'Failed to update', 'error'); }
+                    } catch (error) { showToast('Network error. Please try again.', 'error'); }
+                    finally { btn.innerHTML = originalText; btn.disabled = false; }
+                });
+            }
+            
+            // Deploy Form Handler
+            const confirmDeployBtn = document.getElementById('confirmDeployBtn');
+            if (confirmDeployBtn) {
+                const newBtn = confirmDeployBtn.cloneNode(true);
+                confirmDeployBtn.parentNode.replaceChild(newBtn, confirmDeployBtn);
+                newBtn.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    const requestId = document.getElementById('deployRequestId').value;
+                    const formData = new FormData();
+                    const photoFile = document.getElementById('deploymentPhoto').files[0];
+                    if (!photoFile) { showToast('Please upload deployment proof photo', 'error'); return; }
+                    formData.append('deployment_photo', photoFile);
+                    formData.append('branch_code', document.getElementById('deployBranchCode').value);
+                    formData.append('branch_name', document.getElementById('deployBranchName').value);
+                    formData.append('brand', document.getElementById('deployBrand').value);
+                    formData.append('model', document.getElementById('deployModel').value);
+                    formData.append('serial_number', document.getElementById('deploySerialNumber').value);
+                    formData.append('deployment_date', document.getElementById('deploymentDate').value);
+                    const btn = newBtn;
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                    btn.disabled = true;
+                    try {
+                        const res = await fetch(`/api/hardware-requests/${requestId}/deploy`, { method: 'POST', body: formData });
+                        const data = await res.json();
+                        if (data.success) {
+                            closeDeployModal();
+                            showToast('Hardware deployed successfully!', 'success');
+                            if (typeof loadRequestsView === 'function') await loadRequestsView();
+                            if (typeof loadDeployedUnits === 'function') await loadDeployedUnits();
+                        } else { showToast(data.error || 'Failed to deploy', 'error'); }
+                    } catch (error) { showToast('Network error. Please try again.', 'error'); }
+                    finally { btn.innerHTML = originalText; btn.disabled = false; }
+                });
+            }
+            
+            // New Request Submit Handler
+            const submitRequestBtn = document.getElementById('submitRequestBtn');
+            if (submitRequestBtn) {
+                const newSubmitBtn = submitRequestBtn.cloneNode(true);
+                submitRequestBtn.parentNode.replaceChild(newSubmitBtn, submitRequestBtn);
+                newSubmitBtn.addEventListener('click', async function() {
+                    if (currentUser && currentUser.role !== 'admin') { showToast('Only admin can create requests', 'error'); return; }
+                    const branchValue = document.getElementById('branchSelect')?.value;
+                    if (!branchValue) { showToast('Please select a branch', 'error'); return; }
+                    const [branchCode, branchName] = branchValue.split('|');
+                    const remarks = document.getElementById('remarksSelect')?.value;
+                    if (!remarks) { showToast('Please select remarks', 'error'); return; }
+                    const ticketNo = document.getElementById('ticketNo')?.value;
+                    const trfNumber = document.getElementById('trfNumber')?.value;
+                    const status = document.getElementById('status')?.value;
+                    if (status === 'For Store Transfer' && (!trfNumber || trfNumber.trim() === '')) { showToast('TRF # is required when status is For Store Transfer', 'error'); return; }
+                    if (ticketNo && ticketNo.trim() !== '') {
+                        const exists = await checkTicketNumberExists(ticketNo);
+                        if (exists) { showToast('Ticket number already exists. Please use a different ticket number.', 'error'); document.getElementById('ticketNo').focus(); return; }
+                    }
+                    const formData = { ticket_no: ticketNo || '', branch_code: branchCode, branch_name: branchName, date_reported: document.getElementById('date_reported')?.value || new Date().toISOString().split('T')[0], asset_category: document.getElementById('asset_category')?.value, brand: document.getElementById('brand')?.value, model: document.getElementById('model')?.value, serial_number: document.getElementById('serial_number')?.value, hardware_age: document.getElementById('hardware_age')?.value, status: status, description: document.getElementById('description')?.value, remarks: remarks, trf_number: trfNumber || '' };
+                    const required = ['asset_category', 'brand', 'model', 'serial_number'];
+                    const missing = required.filter(f => !formData[f]);
+                    if (missing.length) { showToast(`Please fill in: ${missing.join(', ')}`, 'error'); return; }
+                    const btn = document.getElementById('submitRequestBtn');
+                    const original = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+                    btn.disabled = true;
+                    try {
+                        const res = await fetch('/api/hardware-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
+                        const data = await res.json();
+                        if (data.success) { closeNewRequestModal(); showToast(`Request submitted! Ticket: ${data.ticket_no}`, 'success'); if (typeof loadRequestsView === 'function') await loadRequestsView(); }
+                        else { showToast(data.error || 'Failed', 'error'); }
+                    } catch (error) { showToast('Network error', 'error'); }
+                    finally { btn.innerHTML = original; btn.disabled = false; }
+                });
+            }
+            
+            // Create User Submit Handler
+            const createUserForm = document.getElementById('createUserForm');
+            if (createUserForm) {
+                const newCreateUserForm = createUserForm.cloneNode(true);
+                createUserForm.parentNode.replaceChild(newCreateUserForm, createUserForm);
+                newCreateUserForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const userId = document.getElementById('editUserId').value;
+                    const username = document.getElementById('newUsername').value;
+                    const password = document.getElementById('newPassword').value;
+                    const fullname = document.getElementById('newFullname').value;
+                    const email = document.getElementById('newEmail').value;
+                    if (!username) { showToast('Username is required', 'error'); return; }
+                    if (!password && !userId) { showToast('Password is required for new users', 'error'); return; }
+                    if (password && password.length < 8) { showToast('Password must be 8+ characters', 'error'); return; }
+                    if (password && /[!@#$%^&*(),.?":{}|<>]/.test(password)) { showToast('No special characters allowed', 'error'); return; }
+                    let userData = { username, role: selectedRole, fullname, email };
+                    if (password) userData.password = password;
+                    if (selectedRole === 'bit') {
+                        const branchCode = document.getElementById('bitBranchCode').value;
+                        const branchName = document.getElementById('bitBranchName').value;
+                        if (!branchCode || !branchName) { showToast('Branch code and name required', 'error'); return; }
+                        userData.branch_code = branchCode; userData.branch_name = branchName;
+                        userData.assigned_branches = JSON.stringify([{ branch_code: branchCode, branch_name: branchName }]);
+                    } else if (selectedRole === 'dit') {
+                        const district = document.getElementById('ditDistrict').value;
+                        if (!district) { showToast('Please select a district', 'error'); return; }
+                        const selectedBranches = getSelectedBranches();
+                        if (selectedBranches.length === 0) { showToast('Please select at least one branch', 'error'); return; }
+                        userData.district = district; userData.assigned_branches = JSON.stringify(selectedBranches);
+                        userData.branch_code = district; userData.branch_name = `${district} District`;
+                    }
+                    const btn = document.getElementById('saveUserBtn');
+                    const original = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                    btn.disabled = true;
+                    try {
+                        const url = userId ? `/api/users/${userId}` : '/api/users';
+                        const method = userId ? 'PUT' : 'POST';
+                        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(userData) });
+                        const data = await res.json();
+                        if (data.success) {
+                            closeCreateUserModal();
+                            showToast(userId ? 'User updated successfully!' : 'User created successfully!', 'success');
+                            await loadBitBranches();
+                            if (currentTab === 'users' && typeof loadUsers === 'function') await loadUsers();
+                        } else { showToast(data.error || 'Failed to save user', 'error'); }
+                    } catch (error) { showToast('Network error. Please try again.', 'error'); }
+                    finally { btn.innerHTML = original; btn.disabled = false; }
+                });
+            }
+        });
+        
+        // ========== CLOSE FUNCTIONS ==========
+        window.closeReceivedModal = function() { document.getElementById('receivedModal').classList.add('hidden'); };
+        window.closeDeployModal = function() { document.getElementById('deployModal').classList.add('hidden'); };
+        window.closeGradeModal = function() { document.getElementById('gradeModal').classList.add('hidden'); };
+        
+        // ========== GRADE FUNCTIONS ==========
+        window.submitGrade = submitGrade;
+        
+        // ========== DELETE USER ==========
+        window.deleteUser = async function(userId) {
+            if (!confirm('⚠️ Are you sure you want to delete this user?')) return;
+            try {
+                const res = await fetch(`/api/users/${userId}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) { showToast('User deleted successfully!', 'success'); if (typeof loadUsers === 'function') await loadUsers(); if (typeof loadBitBranches === 'function') await loadBitBranches(); }
+                else { showToast(data.error || 'Delete failed', 'error'); }
+            } catch (error) { showToast('Network error. Please try again.', 'error'); }
+        };
+        
+        // ========== GENERATE REPORT ==========
+        window.generateReport = generateReport;
+        window.exportToCSV = exportToCSV;
+        window.exportToPDF = exportToPDF;
+    </script>
+</body>
+</html>

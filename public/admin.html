@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - IT Hardware Portal</title>
+
+  <!-- Bootstrap 5 -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+
+  <style>
+    body { background: #f5f7fa; }
+    .navbar-brand { font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-dark bg-dark px-3">
+  <a class="navbar-brand text-white" href="#">IT Hardware Portal - Admin</a>
+  <button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button>
+</nav>
+
+<div class="container mt-3">
+
+  <!-- NAV TABS -->
+  <ul class="nav nav-tabs" id="adminTabs">
+    <li class="nav-item">
+      <a class="nav-link active" data-bs-toggle="tab" href="#requestsTab">Requests</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#usersTab">User Management</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#reportsTab">Reports</a>
+    </li>
+  </ul>
+
+  <!-- TAB CONTENT -->
+  <div class="tab-content mt-3">
+
+    <!-- REQUESTS TAB -->
+    <div class="tab-pane fade show active" id="requestsTab">
+      <button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#addRequestModal">
+        + Add Request
+      </button>
+
+      <div class="table-responsive">
+        <table class="table table-bordered table-striped" id="requestsTable">
+          <thead class="table-dark">
+            <tr>
+              <th>Ticket No</th>
+              <th>Branch</th>
+              <th>Date Reported</th>
+              <th>Date Acknowledged</th>
+              <th>Aging</th>
+              <th>Category</th>
+              <th>Brand</th>
+              <th>Model</th>
+              <th>Serial</th>
+              <th>Status</th>
+              <th>Remarks</th>
+              <th>Hardware Age</th>
+              <th style="width:120px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- USERS TAB -->
+    <div class="tab-pane fade" id="usersTab">
+      <h5>User Management</h5>
+      <button class="btn btn-success mb-2">+ Add User</button>
+      <p class="text-muted">User listing will be added next.</p>
+    </div>
+
+    <!-- REPORTS TAB -->
+    <div class="tab-pane fade" id="reportsTab">
+      <h5>Reports</h5>
+      <button class="btn btn-secondary mb-2" onclick="alert('Export coming next!')">
+        Export CSV
+      </button>
+      <p class="text-muted">Report graphs & filters will be added here next.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ADD REQUEST MODAL -->
+<div class="modal fade" id="addRequestModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Hardware Request</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addRequestForm">
+          <div class="row mb-2">
+            <div class="col">
+              <label class="form-label">Ticket No</label>
+              <input class="form-control" name="ticket_no" required>
+            </div>
+            <div class="col">
+              <label class="form-label">Branch Name</label>
+              <input class="form-control" name="branch_name" required>
+            </div>
+          </div>
+
+          <div class="row mb-2">
+            <div class="col">
+              <label class="form-label">Date Reported</label>
+              <input type="date" class="form-control" name="date_reported">
+            </div>
+            <div class="col">
+              <label class="form-label">Date Acknowledged</label>
+              <input type="date" class="form-control" name="date_acknowledged">
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-bold">Asset Category</label>
+            <select class="form-select" name="category">
+              <option>--Please Select--</option>
+              <option>Server</option>
+              <option>Workstation</option>
+              <option>POS</option>
+              <option>Hard Disk</option>
+              <option>Thermal Printer</option>
+              <option>Thermal Printer Power Adaptor</option>
+              <option>Dot Matrix Printer</option>
+              <option>Inkjet Printer</option>
+              <option>3in1 Inkjet Printer</option>
+              <option>Shelftag Printer</option>
+              <option>Monitor</option>
+              <option>Cash Drawer</option>
+              <option>Cradle</option>
+              <option>Data Collector</option>
+              <option>Network Switch 48P</option>
+              <option>Network Switch 24P</option>
+              <option>Access Point</option>
+              <option>Magnetic Swipe Reader</option>
+              <option>Fingerprint Scanner</option>
+              <option>Vertical Scanner</option>
+              <option>Handheld Scanner</option>
+              <option>Scanner Power Adaptor</option>
+              <option>Scanner Data Cable</option>
+              <option>Tower UPS</option>
+              <option>Regular UPS</option>
+              <option>Price Verifier</option>
+              <option>Speaker</option>
+              <option>WebCam</option>
+              <option>Keyboard</option>
+              <option>Mouse</option>
+              <option>Laptop</option>
+            </select>
+          </div>
+
+          <div class="row mb-2">
+            <div class="col">
+              <label class="form-label">Brand</label>
+              <input class="form-control" name="brand">
+            </div>
+            <div class="col">
+              <label class="form-label">Model</label>
+              <input class="form-control" name="model">
+            </div>
+          </div>
+
+          <div class="row mb-2">
+            <div class="col">
+              <label class="form-label">Serial No</label>
+              <input class="form-control" name="serial_no">
+            </div>
+          </div>
+
+          <div class="row mb-2">
+            <div class="col">
+              <label class="form-label">Remarks</label>
+              <input class="form-control" name="remarks">
+            </div>
+            <div class="col">
+              <label class="form-label fw-bold">Hardware Age</label>
+              <select class="form-select" name="hardware_age">
+                <option>1-2yrs</option>
+                <option>3-4yrs</option>
+                <option>5-9yrs</option>
+                <option>10yrs</option>
+              </select>
+            </div>
+          </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="saveRequest()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT REQUEST MODAL -->
+<div class="modal fade" id="editRequestModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Hardware Request</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editRequestForm">
+          <input type="hidden" name="id">
+
+          <div class="row mb-2">
+            <div class="col">
+              <label class="form-label">Ticket No</label>
+              <input class="form-control" name="ticket_no" required>
+            </div>
+            <div class="col">
+              <label class="form-label">Branch Name</label>
+              <input class="form-control" name="branch_name" required>
+            </div>
+          </div>
+
+          <div class="row mb-2">
+            <div class="col">
+              <label class="form-label">Date Reported</label>
+              <input type="date" class="form-control" name="date_reported">
+            </div>
+            <div class="col">
+              <label class="form-label">Date Acknowledged</label>
+              <input type="date" class="form-control" name="date_acknowledged">
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-bold">Asset Category</label>
+            <select class="form-select" name="category">
+              <option>--Please Select--</option>
+              <option>Server</option>
+              <option>Workstation</option>
+              <option>POS</option>
+              <option>Hard Disk</option>
+              <option>Thermal Printer</option>
+              <option>Thermal Printer Power Adaptor</option>
+              <option>Dot Matrix Printer</option>
+              <option>Inkjet Printer</option>
+              <option>3in1 Inkjet Printer</option>
+              <option>Shelftag Printer</option>
+              <option>Monitor</option>
+              <option>Cash Drawer</option>
+              <option>Cradle</option>
+              <option>Data Collector</option>
+              <option>Network Switch 48P</option>
+              <option>Network Switch 24P</option>
+              <option>Access Point</option>
+              <option>Magnetic Swipe Reader</option>
+              <option>Fingerprint Scanner</option>
+              <option>Vertical Scanner</option>
+              <option>Handheld Scanner</option>
+              <option>Scanner Power Adaptor</option>
+              <option>Scanner Data Cable</option>
+              <option>Tower UPS</option>
+              <option>Regular UPS</option>
+              <option>Price Verifier</option>
+              <option>Speaker</option>
+              <option>WebCam</option>
+              <option>Keyboard</option>
+              <option>Mouse</option>
+              <option>Laptop</option>
+            </select>
+          </div>
+
+          <div class="row mb-2">
+            <div class="col">
+              <label class="form-label">Brand</label>
+              <input class="form-control" name="brand">
+            </div>
+            <div class="col">
+              <label class="form-label">Model</label>
+              <input class="form-control" name="model">
+            </div>
+          </div>
+
+          <div class="row mb-2">
+            <div class="col">
+              <label class="form-label">Serial No</label>
+              <input class="form-control" name="serial_no">
+            </div>
+            <div class="col">
+              <label class="form-label">Status</label>
+              <select class="form-select" name="status">
+                <option>Prepared</option>
+                <option>For DM Approval</option>
+                <option>For Management Approval</option>
+                <option>For P.O. of Purchasing</option>
+                <option>Delivery of unit to Pasig Depot</option>
+                <option>Delivery of unit to Mexico Depot</option>
+                <option>Delivery of unit to Carmona Depot</option>
+                <option>For TRF Request</option>
+                <option>For TRF Creation</option>
+                <option>For Store Transfer</option>
+                <option>Received on Store</option>
+                <option>Deployed on Store</option>
+                <option>For Repair</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-2">
+            <div class="col">
+              <label class="form-label">Remarks</label>
+              <input class="form-control" name="remarks">
+            </div>
+            <div class="col">
+              <label class="form-label fw-bold">Hardware Age</label>
+              <select class="form-select" name="hardware_age">
+                <option>1-2yrs</option>
+                <option>3-4yrs</option>
+                <option>5-9yrs</option>
+                <option>10yrs</option>
+              </select>
+            </div>
+          </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="updateRequest()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/admin.js"></script>
+
+</body>
+</html>
