@@ -3,7 +3,7 @@ const session = require('express-session');
 const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
-require('dotenv').config();
+
 
 // Import database first to initialize
 const { db, initDatabase } = require('./models/database');
