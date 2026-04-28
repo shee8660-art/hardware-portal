@@ -1,5 +1,5 @@
 // models/database.js - Works with SQLite (dev) and PostgreSQL (production)
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const path = require('path');
 
 const isProduction = process.env.NODE_ENV === 'production';
