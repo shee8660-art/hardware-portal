@@ -78,6 +78,7 @@ app.get('/api/test', async (req, res) => {
             users: users
         });
     } catch (error) {
+        console.error('Test endpoint error:', error);
         res.json({
             success: false,
             error: error.message
@@ -117,7 +118,7 @@ async function startServer() {
         await initDatabase();
         console.log('✅ Database initialized successfully');
         
-        // Start server - LISTEN ON 0.0.0.0 (critical for Render)
+        // Start server - LISTEN ON 0.0.0.0 (CRITICAL for Render)
         app.listen(PORT, '0.0.0.0', () => {
             console.log(`\n🚀 Server running on port ${PORT}`);
             console.log(`📊 Environment: ${isProduction ? 'PRODUCTION (Supabase)' : 'DEVELOPMENT (SQLite)'}`);
