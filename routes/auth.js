@@ -1,31 +1,19 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { db, get, run, query, logActivity, isProduction } = require('../models/database');
+const { query, logActivity, isProduction } = require('../models/database');
 
 const router = express.Router();
 
-// Login - Updated for async/await and PostgreSQL compatibility
+// Login route
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
     
     console.log(`Login attempt: ${username}`);
     
     try {
-        let user;
-        
-        if (isProduction) {
-            // PostgreSQL syntax (Supabase)
-            const result = await query('SELECT * FROM users WHERE username = $1', [username]);
-            user = result[0];
-        } else {
-            // SQLite syntax (development)
-            user = await new Promise((resolve, reject) => {
-                db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row);
-                });
-            });
-        }
+        // Query user from database using PostgreSQL syntax
+        const users = await query('SELECT * FROM users WHERE username = $1', [username]);
+        const user = users[0];
         
         if (!user) {
             console.log(`User not found: ${username}`);
@@ -35,139 +23,99 @@ router.post('/login', async (req, res) => {
         console.log(`User found: ${username}, role: ${user.role}`);
         
         // Compare password using bcryptjs
-        const result = bcrypt.compareSync(password, user.password);
+        const validPassword = bcrypt.compareSync(password, user.password);
         
-        if (result) {
+        if (validPassword) {
+            // Set session variables
             req.session.userId = user.id;
             req.session.userRole = user.role;
             req.session.username = user.username;
             req.session.branchCode = user.branch_code;
             req.session.branchName = user.branch_name;
             
-            // Log activity - works with both databases
+            // Log activity
             await logActivity(user.id, 'LOGIN', 'User logged in', req.ip);
             
             console.log(`Login successful: ${username}`);
-            res.json({ success: true, role: user.role });
+            
+            // Return success response with role
+            return res.json({ 
+                success: true, 
+                role: user.role,
+                message: 'Login successful'
+            });
         } else {
             console.log(`Invalid password for: ${username}`);
-            res.json({ success: false, message: 'Invalid password' });
+            return res.json({ success: false, message: 'Invalid password' });
         }
     } catch (err) {
         console.error('Database error during login:', err);
-        res.json({ success: false, message: 'Database error' });
+        return res.json({ success: false, message: 'Database error. Please try again.' });
     }
 });
 
-// Get current user - Updated for PostgreSQL compatibility
+// Get current user
 router.get('/user', async (req, res) => {
     if (!req.session.userId) {
         return res.json({ loggedIn: false });
     }
     
     try {
-        let user;
+        const users = await query(
+            'SELECT id, username, role, fullname, email, branch_code, branch_name, district, assigned_branches, wms_id FROM users WHERE id = $1',
+            [req.session.userId]
+        );
+        const user = users[0];
         
-        if (isProduction) {
-            // PostgreSQL syntax (Supabase)
-            const result = await query(
-                'SELECT id, username, role, fullname, email, branch_code, branch_name, district, assigned_branches, wms_id FROM users WHERE id = $1',
-                [req.session.userId]
-            );
-            user = result[0];
+        if (user) {
+            res.json({ loggedIn: true, user });
         } else {
-            // SQLite syntax (development)
-            user = await new Promise((resolve, reject) => {
-                db.get(
-                    'SELECT id, username, role, fullname, email, branch_code, branch_name, district, assigned_branches, wms_id FROM users WHERE id = ?',
-                    [req.session.userId],
-                    (err, row) => {
-                        if (err) reject(err);
-                        else resolve(row);
-                    }
-                );
-            });
+            res.json({ loggedIn: false });
         }
-        
-        res.json({ loggedIn: true, user });
     } catch (err) {
         console.error('Error fetching user:', err);
         res.json({ loggedIn: false });
     }
 });
 
-// Get statistics - Updated for PostgreSQL compatibility
+// Get statistics for dashboard
 router.get('/stats', async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ error: 'Unauthorized' });
     
     try {
-        let total, pending, approved, received, highUrgency;
+        // Get total requests
+        const totalResult = await query('SELECT COUNT(*) as count FROM hardware_requests');
+        const total = parseInt(totalResult[0]?.count || 0);
         
-        if (isProduction) {
-            // PostgreSQL syntax (Supabase)
-            const totalResult = await query('SELECT COUNT(*) as count FROM hardware_requests');
-            total = parseInt(totalResult[0]?.count || 0);
-            
-            const pendingResult = await query("SELECT COUNT(*) as count FROM hardware_requests WHERE status = 'For DM Approval'");
-            pending = parseInt(pendingResult[0]?.count || 0);
-            
-            const approvedResult = await query("SELECT COUNT(*) as count FROM hardware_requests WHERE status = 'Deployed on Store'");
-            approved = parseInt(approvedResult[0]?.count || 0);
-            
-            const receivedResult = await query("SELECT COUNT(*) as count FROM hardware_requests WHERE status = 'Received on Store'");
-            received = parseInt(receivedResult[0]?.count || 0);
-            
-            const highUrgencyResult = await query("SELECT COUNT(*) as count FROM hardware_requests WHERE status = 'For DM Approval'");
-            highUrgency = parseInt(highUrgencyResult[0]?.count || 0);
-        } else {
-            // SQLite syntax (development)
-            total = await new Promise((resolve, reject) => {
-                db.get('SELECT COUNT(*) as total FROM hardware_requests', (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row ? row.total : 0);
-                });
-            });
-            
-            pending = await new Promise((resolve, reject) => {
-                db.get("SELECT COUNT(*) as pending FROM hardware_requests WHERE status = 'For DM Approval'", (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row ? row.pending : 0);
-                });
-            });
-            
-            approved = await new Promise((resolve, reject) => {
-                db.get("SELECT COUNT(*) as approved FROM hardware_requests WHERE status = 'Deployed on Store'", (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row ? row.approved : 0);
-                });
-            });
-            
-            received = await new Promise((resolve, reject) => {
-                db.get("SELECT COUNT(*) as received FROM hardware_requests WHERE status = 'Received on Store'", (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row ? row.received : 0);
-                });
-            });
-            
-            highUrgency = await new Promise((resolve, reject) => {
-                db.get("SELECT COUNT(*) as highUrgency FROM hardware_requests WHERE status = 'For DM Approval'", (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row ? row.highUrgency : 0);
-                });
-            });
-        }
+        // Get pending requests
+        const pendingResult = await query("SELECT COUNT(*) as count FROM hardware_requests WHERE status = 'For DM Approval'");
+        const pending = parseInt(pendingResult[0]?.count || 0);
+        
+        // Get approved/deployed requests
+        const approvedResult = await query("SELECT COUNT(*) as count FROM hardware_requests WHERE status = 'Deployed on Store'");
+        const approved = parseInt(approvedResult[0]?.count || 0);
+        
+        // Get received requests
+        const receivedResult = await query("SELECT COUNT(*) as count FROM hardware_requests WHERE status = 'Received on Store'");
+        const received = parseInt(receivedResult[0]?.count || 0);
         
         res.json({
             total,
             pending,
             approved,
             received,
-            highUrgency
+            highUrgency: pending // Using pending as high urgency for now
         });
     } catch (err) {
         console.error('Error fetching stats:', err);
         res.status(500).json({ error: 'Database error' });
     }
+});
+
+// Logout
+router.post('/logout', (req, res) => {
+    req.session.destroy();
+    res.json({ success: true });
 });
 
 module.exports = router;
