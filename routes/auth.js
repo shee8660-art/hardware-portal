@@ -11,7 +11,7 @@ router.post('/login', async (req, res) => {
     console.log(`Login attempt: ${username}`);
     
     try {
-        // Query user from database using PostgreSQL syntax
+        // Query user from database
         const users = await query('SELECT * FROM users WHERE username = $1', [username]);
         const user = users[0];
         
@@ -20,10 +20,11 @@ router.post('/login', async (req, res) => {
             return res.json({ success: false, message: 'User not found' });
         }
         
-        console.log(`User found: ${username}, role: ${user.role}`);
+        console.log(`User found: ${username}, role: ${user.role}, password hash: ${user.password.substring(0, 20)}...`);
         
-        // Compare password using bcryptjs
+        // Compare password
         const validPassword = bcrypt.compareSync(password, user.password);
+        console.log(`Password valid: ${validPassword}`);
         
         if (validPassword) {
             // Set session variables
@@ -33,16 +34,24 @@ router.post('/login', async (req, res) => {
             req.session.branchCode = user.branch_code;
             req.session.branchName = user.branch_name;
             
-            // Log activity
-            await logActivity(user.id, 'LOGIN', 'User logged in', req.ip);
-            
-            console.log(`Login successful: ${username}`);
-            
-            // Return success response with role
-            return res.json({ 
-                success: true, 
-                role: user.role,
-                message: 'Login successful'
+            // Save session explicitly
+            req.session.save((err) => {
+                if (err) {
+                    console.error('Session save error:', err);
+                    return res.json({ success: false, message: 'Session error' });
+                }
+                
+                // Log activity
+                logActivity(user.id, 'LOGIN', 'User logged in', req.ip).catch(console.error);
+                
+                console.log(`Login successful: ${username}, session ID: ${req.session.id}`);
+                
+                // Return success response
+                return res.json({ 
+                    success: true, 
+                    role: user.role,
+                    message: 'Login successful'
+                });
             });
         } else {
             console.log(`Invalid password for: ${username}`);
@@ -50,12 +59,14 @@ router.post('/login', async (req, res) => {
         }
     } catch (err) {
         console.error('Database error during login:', err);
-        return res.json({ success: false, message: 'Database error. Please try again.' });
+        return res.json({ success: false, message: 'Database error: ' + err.message });
     }
 });
 
 // Get current user
 router.get('/user', async (req, res) => {
+    console.log('Session check - userId:', req.session.userId);
+    
     if (!req.session.userId) {
         return res.json({ loggedIn: false });
     }
@@ -78,24 +89,20 @@ router.get('/user', async (req, res) => {
     }
 });
 
-// Get statistics for dashboard
+// Get statistics
 router.get('/stats', async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ error: 'Unauthorized' });
     
     try {
-        // Get total requests
         const totalResult = await query('SELECT COUNT(*) as count FROM hardware_requests');
         const total = parseInt(totalResult[0]?.count || 0);
         
-        // Get pending requests
         const pendingResult = await query("SELECT COUNT(*) as count FROM hardware_requests WHERE status = 'For DM Approval'");
         const pending = parseInt(pendingResult[0]?.count || 0);
         
-        // Get approved/deployed requests
         const approvedResult = await query("SELECT COUNT(*) as count FROM hardware_requests WHERE status = 'Deployed on Store'");
         const approved = parseInt(approvedResult[0]?.count || 0);
         
-        // Get received requests
         const receivedResult = await query("SELECT COUNT(*) as count FROM hardware_requests WHERE status = 'Received on Store'");
         const received = parseInt(receivedResult[0]?.count || 0);
         
@@ -104,7 +111,7 @@ router.get('/stats', async (req, res) => {
             pending,
             approved,
             received,
-            highUrgency: pending // Using pending as high urgency for now
+            highUrgency: pending
         });
     } catch (err) {
         console.error('Error fetching stats:', err);
@@ -114,8 +121,13 @@ router.get('/stats', async (req, res) => {
 
 // Logout
 router.post('/logout', (req, res) => {
-    req.session.destroy();
-    res.json({ success: true });
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Logout error:', err);
+            return res.json({ success: false });
+        }
+        res.json({ success: true });
+    });
 });
 
 module.exports = router;

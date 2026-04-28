@@ -38,16 +38,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use('/uploads', express.static('public/uploads'));
+
+// Session configuration - FIXED FOR RENDER
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-this',
     resave: false,
     saveUninitialized: false,
     cookie: { 
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 3600000,
+        maxAge: 3600000, // 1 hour
         httpOnly: true,
-        sameSite: 'strict'
-    }
+        sameSite: 'lax'  // Changed from 'strict' to 'lax' for better compatibility
+    },
+    proxy: true,  // Important for Render
+    trust proxy: 1  // Trust first proxy (Render's load balancer)
 }));
 
 // Security headers
